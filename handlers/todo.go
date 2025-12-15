@@ -1,0 +1,56 @@
+package handlers
+
+import (
+	"encoding/json"
+	"net/http"
+	"strconv"
+
+	"my-todo/database"
+	"my-todo/models"
+)
+
+func CreateTodo(w http.ResponseWriter, r *http.Request) {
+	var todo models.Todo
+
+	if err := json.NewDecoder(r.Body).Decode(&todo); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	database.DB.Create(&todo)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(todo)
+}
+
+func GetTodos(w http.ResponseWriter, r *http.Request) {
+	var todos []models.Todo
+	database.DB.Find(&todos)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(todos)
+}
+
+func GetTodoByID(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Query().Get("id")
+	id, _ := strconv.Atoi(idStr)
+
+	var todo models.Todo
+	result := database.DB.First(&todo, id)
+	if result.Error != nil {
+		http.Error(w, "Todo not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(todo)
+}
+
+func DeleteTodo(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Query().Get("id")
+	id, _ := strconv.Atoi(idStr)
+
+	database.DB.Delete(&models.Todo{}, id)
+	w.WriteHeader(http.StatusNoContent)
+}
