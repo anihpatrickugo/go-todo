@@ -24,7 +24,10 @@ func Connect() {
 
 
 func Migrate() {
-	err := DB.AutoMigrate(&models.Todo{})
+	err := DB.AutoMigrate(
+		&models.User{},
+		&models.Todo{},
+	)
 	if err != nil {
 		log.Fatal("migration failed:", err)
 	}

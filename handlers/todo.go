@@ -7,9 +7,12 @@ import (
 
 	"my-todo/database"
 	"my-todo/models"
+    "my-todo/middleware"
 )
 
 func CreateTodo(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(middleware.UserIDKey).(uint)
+
 	var todo models.Todo
 
 	if err := json.NewDecoder(r.Body).Decode(&todo); err != nil {
@@ -17,6 +20,7 @@ func CreateTodo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	todo.UserID = userID
 	database.DB.Create(&todo)
 
 	w.Header().Set("Content-Type", "application/json")
@@ -25,19 +29,24 @@ func CreateTodo(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetTodos(w http.ResponseWriter, r *http.Request) {
+
+	userID := r.Context().Value(middleware.UserIDKey).(uint)
+
 	var todos []models.Todo
-	database.DB.Find(&todos)
+	database.DB.Where("user_id = ?", userID).Find(&todos)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(todos)
 }
 
 func GetTodoByID(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(middleware.UserIDKey).(uint)
+	
 	idStr := r.URL.Query().Get("id")
 	id, _ := strconv.Atoi(idStr)
 
 	var todo models.Todo
-	result := database.DB.First(&todo, id)
+	result := database.DB.First(&todo, id, "user_id = ?", userID)
 	if result.Error != nil {
 		http.Error(w, "Todo not found", http.StatusNotFound)
 		return
@@ -48,9 +57,11 @@ func GetTodoByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteTodo(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(middleware.UserIDKey).(uint)
+
 	idStr := r.URL.Query().Get("id")
 	id, _ := strconv.Atoi(idStr)
 
-	database.DB.Delete(&models.Todo{}, id)
+	database.DB.Delete(&models.Todo{}, id, "user_id = ?", userID)
 	w.WriteHeader(http.StatusNoContent)
 }

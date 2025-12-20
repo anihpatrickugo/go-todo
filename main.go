@@ -1,27 +1,34 @@
 package main
 
 import (
-    "log"
-    "net/http"
+	"log"
+	"net/http"
 
-    "github.com/gorilla/mux"
-    "my-todo/database"
+	"github.com/gorilla/mux"
+	"my-todo/database"
 	"my-todo/handlers"
+	"my-todo/middleware"
 )
 
-
-
 func main() {
-    database.Connect()
+	database.Connect()
 	database.Migrate()
 
-    router := mux.NewRouter()
+	router := mux.NewRouter()
 
-    router.HandleFunc("/todos", handlers.GetTodos).Methods("GET")
-    router.HandleFunc("/todos", handlers.CreateTodo).Methods("POST")
-    router.HandleFunc("/todo", handlers.GetTodoByID).Methods("GET")
-    router.HandleFunc("/todo", handlers.DeleteTodo).Methods("DELETE")
+	// Public routes
+	router.HandleFunc("/register", handlers.Register).Methods("POST")
+	router.HandleFunc("/login", handlers.Login).Methods("POST")
 
-    log.Println("Server running on http://localhost:8080")
-    log.Fatal(http.ListenAndServe(":8080", router))
+	// Protected routes
+	todoRouter := router.PathPrefix("/").Subrouter()
+	todoRouter.Use(middleware.Auth)
+
+	todoRouter.HandleFunc("/todos", handlers.GetTodos).Methods("GET")
+	todoRouter.HandleFunc("/todos", handlers.CreateTodo).Methods("POST")
+	todoRouter.HandleFunc("/todo", handlers.GetTodoByID).Methods("GET")
+	todoRouter.HandleFunc("/todo", handlers.DeleteTodo).Methods("DELETE")
+
+	log.Println("Server running on http://localhost:8080")
+	log.Fatal(http.ListenAndServe(":8080", router))
 }
